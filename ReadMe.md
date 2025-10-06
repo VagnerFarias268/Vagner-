@@ -1,1 +1,0 @@
-This is Voice agent project (openAI, pinecone, elevenlabs)

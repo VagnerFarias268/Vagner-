@@ -1,0 +1,7 @@
+elevenlabs==1.9.0
+python-dotenv==1.0.1
+requests
+pydub
+ffmpeg
+fastapi
+fastapi.responses
