@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: vagner-sales-agent
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Application
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=${DEBUG:-false}
+      
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      
+      # Pinecone
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENV=${PINECONE_ENV}
+      - PINECONE_INDEX=${PINECONE_INDEX:-sales-agent-kb}
+      
+      # WhatsApp
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
+      - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID}
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
+      
+      # ElevenLabs
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - ELEVEN_VOICE_ID=${ELEVEN_VOICE_ID}
+      - ELEVEN_VOICE_NAME=${ELEVEN_VOICE_NAME}
+      
+      # Folders
+      - MEDIA_FOLDER=/app/materials/media
+      - PDF_FOLDER=/app/materials/pdfs
+      - TEMP_FOLDER=/app/materials/temp
+      
+      # Payment
+      - PAYMENT_LINK_NORMAL=${PAYMENT_LINK_NORMAL:-https://pay.example.com/linkA}
+      - PAYMENT_LINK_DISCOUNT40=${PAYMENT_LINK_DISCOUNT40:-https://pay.example.com/linkA?disc=40}
+      - PAYMENT_LINK_DISCOUNT50=${PAYMENT_LINK_DISCOUNT50:-https://pay.example.com/linkA?disc=50}
+    
+    volumes:
+      - ./materials:/app/materials
+      - ./app:/app/app
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
