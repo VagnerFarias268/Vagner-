@@ -31,39 +31,48 @@ EMBED_DIM = 1536  # matches text-embedding-3-small
 emb = OpenAIEmbeddings(openai_api_key=OPENAI_KEY)
 
 # ---------------------------
-# Flexible Pinecone initialization
 # ---------------------------
 try:
-    import pinecone
+    from pinecone import Pinecone, ServerlessSpec
 except Exception as e:
-    raise ImportError("Missing pinecone client. pip install 'pinecone-client'") from e
+    raise ImportError("Missing pinecone>=5.0.0. Run: pip install pinecone") from e
 
 _index = None
-_client = None
+_pc = None
 
 
 def _init_pinecone_client():
-    global _index, _client
+    global _index, _pc
 
-    Client = getattr(pinecone, "Client", None)
     try:
-        if Client is not None:
-            _client = pinecone.Client(api_key=PINECONE_KEY, environment=PINECONE_ENV)
-            existing = [i["name"] for i in _client.list_indexes()]
-            if INDEX_NAME not in existing:
-                print(f"Creating index '{INDEX_NAME}' via pinecone.Client ...")
-                _client.create_index(name=INDEX_NAME, dimension=EMBED_DIM, metric="cosine")
-            _index = _client.Index(INDEX_NAME)
-        else:
-            # Fallback: older/newer API style
-            pinecone.init(api_key=PINECONE_KEY, environment=PINECONE_ENV)
-            existing = pinecone.list_indexes()
-            if INDEX_NAME not in existing:
-                print(f"Creating index '{INDEX_NAME}' via pinecone.init ...")
-                pinecone.create_index(name=INDEX_NAME, dimension=EMBED_DIM, metric="cosine")
-            _index = pinecone.Index(INDEX_NAME)
+        # Initialize Pinecone v5.x client
+        _pc = Pinecone(api_key=PINECONE_KEY)
+        
+        # List existing indexes
+        existing_indexes = _pc.list_indexes()
+        index_names = [idx.name for idx in existing_indexes]
+        
+        if INDEX_NAME not in index_names:
+            print(f"Creating index '{INDEX_NAME}' with Pinecone v5.x API...")
+            # Create serverless index (adjust cloud/region as needed)
+            _pc.create_index(
+                name=INDEX_NAME,
+                dimension=EMBED_DIM,
+                metric="cosine",
+                spec=ServerlessSpec(
+                    cloud="aws",
+                    region=PINECONE_ENV or "us-east-1"
+                )
+            )
+            print(f"✅ Index '{INDEX_NAME}' created successfully")
+        
+        _index = _pc.Index(INDEX_NAME)
+        
     except Exception as e:
-        raise RuntimeError("Failed to initialize Pinecone index. Check PINECONE_API_KEY and PINECONE_ENV.") from e
+        raise RuntimeError(
+            f"Failed to initialize Pinecone index. "
+            f"Check PINECONE_API_KEY and PINECONE_ENV. Error: {str(e)}"
+        ) from e
 
 
 # initialize on import
@@ -108,13 +117,11 @@ def _upsert(vectors, batch_size: int = 20):
     for i in range(0, len(vectors), batch_size):
         batch = vectors[i:i+batch_size]
         try:
+            # Pinecone v5.x uses index.upsert() directly
             index.upsert(vectors=batch)
-        except Exception:
-            try:
-                pinecone.upsert(index_name=INDEX_NAME, vectors=batch)
-            except Exception as e:
-                print("❌ _upsert failed:", e)
-                raise
+        except Exception as e:
+            print("❌ _upsert failed:", e)
+            raise
 
 
 def _query(vector, top_k, include_metadata=True):
