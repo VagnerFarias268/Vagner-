@@ -6,8 +6,11 @@ import os
 import json
 import sys
 
+# Get the project root directory (parent of scripts/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from app.core.kb.manager import add_file_to_kb, add_url_to_kb, add_media_to_kb
 from app.config import get_settings
@@ -17,6 +20,13 @@ def ingest_pdfs():
     """Ingest all PDF files from the PDFs folder"""
     settings = get_settings()
     pdf_folder = settings.PDF_FOLDER
+
+    # Convert relative path to absolute (relative to PROJECT_ROOT, not cwd)
+    if not os.path.isabs(pdf_folder):
+        pdf_folder = os.path.join(PROJECT_ROOT, pdf_folder)
+    
+
+    print(f"PDF folder: {pdf_folder}");
     
     if not os.path.exists(pdf_folder):
         print(f'⚠️ PDF folder not found: {pdf_folder}')
@@ -62,6 +72,12 @@ def ingest_media():
     settings = get_settings()
     media_folder = settings.MEDIA_FOLDER
     dataset_path = 'materials/media_dataset.json'
+    
+    # Convert relative paths to absolute (relative to PROJECT_ROOT, not cwd)
+    if not os.path.isabs(media_folder):
+        media_folder = os.path.join(PROJECT_ROOT, media_folder)
+    if not os.path.isabs(dataset_path):
+        dataset_path = os.path.join(PROJECT_ROOT, dataset_path)
     
     if not os.path.exists(dataset_path):
         print(f'⚠️ Media dataset not found: {dataset_path}')
