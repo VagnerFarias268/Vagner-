@@ -20,6 +20,8 @@ async def webhook_verification(
     WhatsApp webhook verification endpoint
     This is called by Meta to verify the webhook URL
     """
+
+    print("-----------")
     settings = get_settings()
     
     if hub_mode == "subscribe":

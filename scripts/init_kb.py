@@ -1,6 +1,9 @@
 """
 Initialize Knowledge Base
 Ingests PDFs, URLs, and media files into Pinecone
+
+Note: PDFs are automatically scanned for URLs, and any found URLs
+      will be scraped and their content will be added to the KB as well.
 """
 import os
 import json
@@ -17,7 +20,12 @@ from app.config import get_settings
 
 
 def ingest_pdfs():
-    """Ingest all PDF files from the PDFs folder"""
+    """
+    Ingest all PDF files from the PDFs folder
+    
+    Note: The system automatically detects URLs in PDFs and scrapes their content.
+    This provides richer context by including both the PDF and referenced web pages.
+    """
     settings = get_settings()
     pdf_folder = settings.PDF_FOLDER
 

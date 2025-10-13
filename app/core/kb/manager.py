@@ -134,26 +134,163 @@ def _query(vector, top_k, include_metadata=True):
 # -------------------
 # Add to KB functions
 # -------------------
-def add_file_to_kb(file_path: str):
+def extract_urls_from_text(text: str) -> list[str]:
+    """Extract all URLs from text using regex"""
+    # Pattern to match http/https URLs
+    url_pattern = r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)'
+    urls = re.findall(url_pattern, text)
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_urls = []
+    for url in urls:
+        if url not in seen:
+            seen.add(url)
+            unique_urls.append(url)
+    return unique_urls
+
+
+def scrape_url_content(url: str) -> str:
+    """Scrape text content from a URL"""
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        
+        print(f"  🌐 Scraping URL: {url}")
+        r = requests.get(url, timeout=15, headers={'User-Agent': 'Mozilla/5.0'})
+        r.raise_for_status()
+        
+        soup = BeautifulSoup(r.text, "html.parser")
+        
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        # Extract text from relevant tags
+        texts = " ".join(
+            element.get_text(separator=" ", strip=True) 
+            for element in soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "article", "section"])
+        )
+        
+        if texts:
+            print(f"    ✅ Scraped {len(texts)} characters from {url}")
+            return texts
+        else:
+            print(f"    ⚠️ No text extracted from {url}")
+            return ""
+            
+    except Exception as e:
+        print(f"    ❌ Failed to scrape {url}: {e}")
+        return ""
+
+
+def add_file_to_kb_with_urls(file_path: str, scrape_urls: bool = True):
+    """
+    Add a PDF file to the knowledge base.
+    If scrape_urls=True, extracts URLs from the PDF and scrapes their content as well.
+    
+    Args:
+        file_path: Path to the PDF file
+        scrape_urls: Whether to scrape URLs found in the PDF (default: True)
+    """
     try:
         from PyPDF2 import PdfReader
+        
+        # Extract text from PDF
         reader = PdfReader(file_path)
         texts = [p.extract_text() for p in reader.pages if p.extract_text()]
-        chunks = [t[i:i+800] for t in texts for i in range(0, len(t), 800)]
-
-        if not chunks:
+        full_text = " ".join(texts)
+        
+        if not full_text:
             print(f"⚠️ No text extracted from {file_path}")
             return
-
-        vectors = _embed_texts(chunks)
-        to_upsert = [
-            (f"{int(time.time())}_{i}", vec, {"source": file_path, "type": "text"})
-            for i, vec in enumerate(vectors)
-        ]
+        
+        # Check for URLs in the PDF
+        urls_found = []
+        scraped_content = []
+        
+        if scrape_urls:
+            urls_found = extract_urls_from_text(full_text)
+            
+            if urls_found:
+                print(f"📎 Found {len(urls_found)} URL(s) in {file_path}")
+                
+                # Scrape each URL
+                for url in urls_found:
+                    content = scrape_url_content(url)
+                    if content:
+                        scraped_content.append({
+                            'url': url,
+                            'content': content
+                        })
+        
+        # Chunk the PDF text
+        pdf_chunks = [full_text[i:i+800] for i in range(0, len(full_text), 800)]
+        
+        # Chunk the scraped content
+        all_chunks = pdf_chunks.copy()
+        scraped_chunks_metadata = []
+        
+        for scraped in scraped_content:
+            url = scraped['url']
+            content = scraped['content']
+            url_chunks = [content[i:i+800] for i in range(0, len(content), 800)]
+            
+            # Track which chunks came from which URL
+            for chunk in url_chunks:
+                all_chunks.append(chunk)
+                scraped_chunks_metadata.append(url)
+        
+        if not all_chunks:
+            print(f"⚠️ No content to vectorize from {file_path}")
+            return
+        
+        # Vectorize all chunks
+        vectors = _embed_texts(all_chunks)
+        
+        # Prepare vectors for upsert
+        to_upsert = []
+        timestamp = int(time.time())
+        
+        # Add PDF chunks
+        for i in range(len(pdf_chunks)):
+            to_upsert.append((
+                f"{timestamp}_{i}", 
+                vectors[i], 
+                {"source": file_path, "type": "pdf"}
+            ))
+        
+        # Add scraped URL chunks
+        for i in range(len(pdf_chunks), len(all_chunks)):
+            url_source = scraped_chunks_metadata[i - len(pdf_chunks)]
+            to_upsert.append((
+                f"{timestamp}_url_{i}", 
+                vectors[i], 
+                {"source": url_source, "type": "url_from_pdf", "pdf_source": file_path}
+            ))
+        
+        # Upsert to Pinecone
         _upsert(to_upsert)
-        print(f"✅ added file {file_path}, chunks={len(to_upsert)}")
+        
+        pdf_chunk_count = len(pdf_chunks)
+        url_chunk_count = len(all_chunks) - len(pdf_chunks)
+        
+        print(f"✅ Added file {file_path}")
+        print(f"   📄 PDF chunks: {pdf_chunk_count}")
+        if url_chunk_count > 0:
+            print(f"   🌐 URL chunks: {url_chunk_count} (from {len(scraped_content)} URLs)")
+        
     except Exception as e:
-        print("❌ add_file_to_kb error:", e)
+        print(f"❌ add_file_to_kb_with_urls error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+def add_file_to_kb(file_path: str):
+    """
+    Legacy function - now calls add_file_to_kb_with_urls with default settings.
+    Kept for backwards compatibility.
+    """
+    add_file_to_kb_with_urls(file_path, scrape_urls=True)
 
 
 def add_url_to_kb(url: str):

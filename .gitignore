@@ -112,6 +112,7 @@ generated_audio/
 # Documents (if generated/temporary)
 temp_docs/
 uploads/
+materials/
 
 # API Keys and Secrets
 secrets/

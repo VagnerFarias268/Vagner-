@@ -15,11 +15,11 @@ if [ ! -f .env ]; then
 fi
 
 echo "Starting server..."
-echo "Server will be available at: http://localhost:8000"
-echo "API Docs: http://localhost:8000/docs"
+echo "Server will be available at: http://localhost:8001"
+echo "API Docs: http://localhost:8001/docs"
 echo "Press CTRL+C to stop"
 echo ""
 
 # Start with uvicorn
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 
