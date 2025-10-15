@@ -94,6 +94,8 @@ async def test(
         raise HTTPException(status_code=400, detail="Either 'text' or 'audio' must be provided")
     
     result = {}
+
+    print('text', text)
     
     # Handle text input
     if text:
@@ -130,5 +132,5 @@ async def test(
     
     return {
         "status": "ok",
-        "data": result
+        "data": data
     }
