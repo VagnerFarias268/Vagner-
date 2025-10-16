@@ -96,34 +96,41 @@ class MessageHandler:
         
         return sent
     
-    def detect_buying_intent(self, user_text: str, phone: str) -> bool:
-        """Detect if user wants to buy and send payment link"""
+    def detect_buying_intent(self, user_text: str) -> bool:
+        """Detect if user wants to buy (returns boolean only, doesn't send link)"""
         buying_keywords = [
-            'quero comprar', 'vou comprar', 'fechar pedido',
-            'me manda o link', 'link de pagamento', 'como pagar', 'onde pago'
+            'quero comprar', 'vou comprar', 'fechar pedido', 'fazer pedido',
+            'me manda o link', 'link de pagamento', 'como pagar', 'onde pago',
+            'link', 'pagar', 'comprar', 'quero levar', 'vou levar',
+            'fechar', 'finalizar', 'pagamento', 'adquirir', 'quero um',
+            'quero o', 'quero esse', 'quero essa', 'me vende', 'vender'
         ]
         
-        if any(kw in user_text.lower() for kw in buying_keywords):
-            link = self.payment.get_payment_link(price_objection=False)
-            self.whatsapp.send_text(
-                phone,
-                f'Perfeito! Aqui está o link para finalizar sua compra: {link}'
-            )
-            return True
-        return False
+        user_lower = user_text.lower()
+        return any(kw in user_lower for kw in buying_keywords)
     
-    def handle_price_objection(self, user_text: str, phone: str) -> bool:
-        """Handle price objections with discounted links"""
-        price_keywords = ['caro', 'preço', 'muito caro']
+    def detect_price_objection(self, user_text: str) -> bool:
+        """Detect if user has price objections (returns boolean only)"""
+        price_keywords = [
+            'caro', 'preço', 'muito caro', 'custando', 'valor',
+            'mais barato', 'desconto', 'promoção', 'oferta',
+            'não tenho dinheiro', 'sem dinheiro', 'tá caro'
+        ]
         
-        if any(kw in user_text.lower() for kw in price_keywords):
+        user_lower = user_text.lower()
+        return any(kw in user_lower for kw in price_keywords)
+    
+    def send_payment_link(self, phone: str, has_price_objection: bool = False):
+        """Send appropriate payment link based on customer situation"""
+        if has_price_objection:
             link = self.payment.get_payment_link(price_objection=True, max_discount=False)
-            self.whatsapp.send_text(
-                phone,
-                f'Entendo que o preço é uma preocupação. Posso te oferecer essa condição especial: {link}'
-            )
-            return True
-        return False
+            message = f'💰 Entendo sua preocupação com o preço! Tenho uma condição especial para você: {link}'
+        else:
+            link = self.payment.get_payment_link(price_objection=False)
+            message = f'✅ Perfeito! Aqui está o link para finalizar sua compra: {link}'
+        
+        self.whatsapp.send_text(phone, message)
+        print(f"💳 Payment link sent to {phone} (discount: {has_price_objection})")
     
     def process_message(self, phone: str, message: dict) -> dict:
         """
@@ -140,6 +147,26 @@ class MessageHandler:
         if not user_text:
             self.whatsapp.send_text(phone, 'Desculpe, não entendi. Pode repetir, por favor?')
             return {'status': 'no_input'}
+        
+        # PRIORITY: Check for buying intent FIRST (before AI response)
+        has_buying_intent = self.detect_buying_intent(user_text)
+        has_price_objection = self.detect_price_objection(user_text)
+        
+        # If customer wants to buy, send payment link IMMEDIATELY
+        if has_buying_intent:
+            self.send_payment_link(phone, has_price_objection=has_price_objection)
+            
+            # Archive the buying intent
+            try:
+                add_chat_to_kb(
+                    user_text, 
+                    f"[BUYING INTENT DETECTED] Payment link sent (discount: {has_price_objection})", 
+                    phone
+                )
+            except Exception as e:
+                print('Warning: failed to archive chat:', e)
+            
+            return {'status': 'buying_intent', 'payment_sent': True, 'discount': has_price_objection}
         
         # Get relevant media from KB
         media_files = self.get_relevant_media(user_text)
@@ -159,12 +186,10 @@ class MessageHandler:
         # Send relevant media
         sent_media = self.send_media_files(phone, media_files)
         
-        # Check for buying intent
-        if self.detect_buying_intent(user_text, phone):
-            return {'status': 'buying_intent', 'media_sent': sent_media}
-        
-        # Handle price objection
-        self.handle_price_objection(user_text, phone)
+        # If there was a price objection (but no buying intent), send discounted link
+        if has_price_objection:
+            self.send_payment_link(phone, has_price_objection=True)
+            return {'status': 'price_objection_handled', 'media_sent': sent_media, 'discount_sent': True}
         
         return {'status': 'ok', 'media_sent': sent_media}
 

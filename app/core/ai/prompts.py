@@ -26,12 +26,12 @@ def get_qa_prompt_template():
         input_variables=["context", "question"],
         template=f"""{SYSTEM_PROMPT}
 
-Contexto (do KB):
-{{context}}
+    Contexto (do KB):
+    {{context}}
 
-Pergunta do cliente:
-{{question}}
+    Pergunta do cliente:
+    {{question}}
 
-Resposta clara, útil e profissional:"""
+    Resposta clara, útil e profissional:"""
     )
 
