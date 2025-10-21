@@ -43,9 +43,9 @@ class Settings(BaseSettings):
     TEMP_FOLDER: str = Field(default="materials/temp", env="TEMP_FOLDER")
     
     # Payment Links
-    PAYMENT_LINK_NORMAL: str = Field(default="https://pay.example.com/linkA", env="PAYMENT_LINK_NORMAL")
-    PAYMENT_LINK_DISCOUNT40: str = Field(default="https://pay.example.com/linkA?disc=40", env="PAYMENT_LINK_DISCOUNT40")
-    PAYMENT_LINK_DISCOUNT50: str = Field(default="https://pay.example.com/linkA?disc=50", env="PAYMENT_LINK_DISCOUNT50")
+    PAYMENT_LINK_NORMAL: str = Field(default="https://pay.hest.com.br/b63d0148-9b3c-4f54-8d41-9db42653232a", env="PAYMENT_LINK_NORMAL")
+    PAYMENT_LINK_DISCOUNT40: str = Field(default="https://pay.hest.com.br/d39a2bca-f8a2-4613-993f-d55f09bb5c2d", env="PAYMENT_LINK_DISCOUNT40")
+    PAYMENT_LINK_DISCOUNT50: str = Field(default="https://pay.hest.com.br/5fc7e0e6-dc15-49b8-b0ed-e93a60f6d704", env="PAYMENT_LINK_DISCOUNT50")
     
     class Config:
         env_file = ".env"
