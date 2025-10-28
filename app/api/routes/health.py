@@ -1,7 +1,10 @@
 """Health check endpoints"""
+import os
 from fastapi import APIRouter
+from dotenv import load_dotenv
 from app.models.responses import HealthResponse
-from app.config import get_settings
+
+load_dotenv()
 
 router = APIRouter()
 
@@ -9,21 +12,19 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    settings = get_settings()
-    
     # Check service availability
     services = {
-        "openai": bool(settings.OPENAI_API_KEY),
-        "pinecone": bool(settings.PINECONE_API_KEY),
-        "whatsapp": bool(settings.WHATSAPP_ACCESS_TOKEN),
-        "elevenlabs": bool(settings.ELEVENLABS_API_KEY),
+        "openai": bool(os.getenv("OPENAI_API_KEY")),
+        "pinecone": bool(os.getenv("PINECONE_API_KEY")),
+        "whatsapp": bool(os.getenv("WHATSAPP_ACCESS_TOKEN")),
+        "elevenlabs": bool(os.getenv("ELEVENLABS_API_KEY")),
     }
     
     all_healthy = all(services.values())
     
     return HealthResponse(
         status="healthy" if all_healthy else "degraded",
-        version=settings.APP_VERSION,
+        version=os.getenv("APP_VERSION", "1.0.0"),
         services=services
     )
 
@@ -31,10 +32,9 @@ async def health_check():
 @router.get("/")
 async def root():
     """Root endpoint"""
-    settings = get_settings()
     return {
-        "app": settings.APP_NAME,
-        "version": settings.APP_VERSION,
+        "app": os.getenv("APP_NAME", "Vagner Sales Agent"),
+        "version": os.getenv("APP_VERSION", "1.0.0"),
         "status": "running"
     }
 

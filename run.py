@@ -2,11 +2,16 @@
 """
 Quick start script for development
 """
+import os
 import uvicorn
-from app.config import get_settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if __name__ == "__main__":
-    settings = get_settings()
+    HOST = os.getenv("HOST", "0.0.0.0")
+    PORT = int(os.getenv("PORT", "8000"))
+    DEBUG = os.getenv("DEBUG", "False").lower() == "true"
     
     print(f"""
 ╔═══════════════════════════════════════════════════════════╗
@@ -16,19 +21,19 @@ if __name__ == "__main__":
 ╚═══════════════════════════════════════════════════════════╝
 
 Starting server...
-  📍 Host: {settings.HOST}:{settings.PORT}
-  🔧 Mode: {'DEBUG' if settings.DEBUG else 'PRODUCTION'}
-  📚 Docs: http://{settings.HOST}:{settings.PORT}/docs
-  ❤️  Health: http://{settings.HOST}:{settings.PORT}/health
+  📍 Host: {HOST}:{PORT}
+  🔧 Mode: {'DEBUG' if DEBUG else 'PRODUCTION'}
+  📚 Docs: http://{HOST}:{PORT}/docs
+  ❤️  Health: http://{HOST}:{PORT}/health
 
 Press CTRL+C to stop
 """)
     
     uvicorn.run(
         "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
+        host=HOST,
+        port=PORT,
+        reload=DEBUG,
         log_level="info"
     )
 

@@ -1,11 +1,14 @@
 """WhatsApp webhook endpoints"""
+import os
 from fastapi import APIRouter, Request, HTTPException, Query, File, Form, UploadFile
 from typing import Optional
+from dotenv import load_dotenv
 
 from app.models.responses import WebhookResponse
 from app.services.message_handler import get_message_handler
-from app.config import get_settings
 from app.core.ai.llm import generate_ai_response
+
+load_dotenv()
 
 router = APIRouter()
 
@@ -22,13 +25,13 @@ async def webhook_verification(
     """
 
     print("-----------")
-    settings = get_settings()
+    verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "your-verify-token-here")
     
     if hub_mode == "subscribe":
         # Verify the token matches
-        if settings.WHATSAPP_VERIFY_TOKEN and hub_verify_token == settings.WHATSAPP_VERIFY_TOKEN:
+        if verify_token and hub_verify_token == verify_token:
             return int(hub_challenge)
-        elif not settings.WHATSAPP_VERIFY_TOKEN:
+        elif not verify_token or verify_token == "your-verify-token-here":
             # If no verify token is set, accept any request (dev mode)
             return int(hub_challenge) if hub_challenge else 200
         else:
@@ -105,10 +108,6 @@ async def test(
 
         data = generate_ai_response(text)
         print(data)
-        
-        # Process text with message handler if needed
-        # processed = handler.process_message("test_user", {"text": text})
-        # result["response"] = processed
     
     # Handle audio input
     if audio:

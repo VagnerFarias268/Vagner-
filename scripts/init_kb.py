@@ -15,8 +15,10 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Add parent directory to path for imports
 sys.path.insert(0, PROJECT_ROOT)
 
+from dotenv import load_dotenv
 from app.core.kb.manager import add_file_to_kb, add_url_to_kb, add_media_to_kb
-from app.config import get_settings
+
+load_dotenv()
 
 
 def ingest_pdfs():
@@ -26,8 +28,7 @@ def ingest_pdfs():
     Note: The system automatically detects URLs in PDFs and scrapes their content.
     This provides richer context by including both the PDF and referenced web pages.
     """
-    settings = get_settings()
-    pdf_folder = settings.PDF_FOLDER
+    pdf_folder = os.getenv("PDF_FOLDER", "materials/pdfs")
 
     # Convert relative path to absolute (relative to PROJECT_ROOT, not cwd)
     if not os.path.isabs(pdf_folder):
@@ -77,8 +78,7 @@ def ingest_urls():
 
 def ingest_media():
     """Ingest media files with captions from dataset"""
-    settings = get_settings()
-    media_folder = settings.MEDIA_FOLDER
+    media_folder = os.getenv("MEDIA_FOLDER", "materials/media")
     dataset_path = 'materials/media_dataset.json'
     
     # Convert relative paths to absolute (relative to PROJECT_ROOT, not cwd)

@@ -2,8 +2,8 @@
 import os
 import random
 from typing import Optional, Tuple
+from dotenv import load_dotenv
 
-from app.config import get_settings
 from app.core.ai.llm import generate_ai_response
 from app.core.speech.stt import transcribe_file
 from app.core.speech.tts import synthesize_to_file
@@ -12,12 +12,15 @@ from app.core.kb.retriever import get_retriever
 from app.services.whatsapp import get_whatsapp_client
 from app.services.payment import get_payment_service
 
+load_dotenv()
+
 
 class MessageHandler:
     """Orchestrates message processing logic"""
     
     def __init__(self):
-        self.settings = get_settings()
+        self.temp_folder = os.getenv("TEMP_FOLDER", "materials/temp")
+        self.media_folder = os.getenv("MEDIA_FOLDER", "materials/media")
         self.whatsapp = get_whatsapp_client()
         self.payment = get_payment_service()
         self.retriever = get_retriever()
@@ -37,7 +40,7 @@ class MessageHandler:
                 media_id = message['audio']['id']
                 path = self.whatsapp.download_media_file(
                     media_id,
-                    out_path=os.path.join(self.settings.TEMP_FOLDER, 'input.ogg')
+                    out_path=os.path.join(self.temp_folder, 'input.ogg')
                 )
                 user_text = transcribe_file(path)
                 return user_text, None
@@ -67,7 +70,7 @@ class MessageHandler:
             audio_path = synthesize_to_file(
                 ai_reply,
                 phone=phone,
-                out_dir=self.settings.TEMP_FOLDER
+                out_dir=self.temp_folder
             )
             self.whatsapp.send_audio(phone, audio_path)
         except Exception as e:
@@ -86,7 +89,7 @@ class MessageHandler:
         
         # 30% chance to send fallback media if nothing sent
         if sent == 0 and random.random() < 0.3:
-            fallback = os.path.join(self.settings.MEDIA_FOLDER, 'before_after.jpg')
+            fallback = os.path.join(self.media_folder, 'before_after.jpg')
             if os.path.exists(fallback):
                 try:
                     self.whatsapp.send_media(phone, fallback)

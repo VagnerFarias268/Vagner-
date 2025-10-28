@@ -2,18 +2,19 @@
 import os
 import requests
 from typing import Optional
-from app.config import get_settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class WhatsAppClient:
     """WhatsApp Cloud API integration"""
     
     def __init__(self):
-        settings = get_settings()
-        self.token = settings.WHATSAPP_ACCESS_TOKEN
-        self.phone_id = settings.WHATSAPP_PHONE_ID
+        self.token = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+        self.phone_id = os.getenv("WHATSAPP_PHONE_ID", "")
         self.base_url = 'https://graph.facebook.com/v20.0'
-        self.temp_folder = settings.TEMP_FOLDER
+        self.temp_folder = os.getenv("TEMP_FOLDER", "materials/temp")
         os.makedirs(self.temp_folder, exist_ok=True)
     
     def send_text(self, to: str, body: str) -> dict:
