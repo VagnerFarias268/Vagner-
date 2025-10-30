@@ -24,7 +24,7 @@ APP_NAME = os.getenv("APP_NAME", "Vagner Sales Agent")
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8000"))
+PORT = int(os.getenv("PORT", "8001"))
 
 # Create FastAPI app
 app = FastAPI(

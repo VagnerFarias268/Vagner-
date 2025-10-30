@@ -23,10 +23,10 @@ def get_llm():
 
 @lru_cache()
 def get_qa_chain():
-    """Get cached RetrievalQA chain"""
+    """Get cached RetrievalQA chain (default without price objection)"""
     llm = get_llm()
     retriever = get_retriever()
-    prompt_template = get_qa_prompt_template()
+    prompt_template = get_qa_prompt_template(has_price_objection=False)
     
     return RetrievalQA.from_chain_type(
         llm=llm,
@@ -36,8 +36,28 @@ def get_qa_chain():
     )
 
 
-def generate_ai_response(user_text: str) -> str:
+def _create_qa_chain_with_price_objection():
+    """Create a non-cached QA chain with price objection context"""
+    llm = get_llm()
+    retriever = get_retriever()
+    prompt_template = get_qa_prompt_template(has_price_objection=True)
+    
+    return RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=retriever,
+        chain_type='stuff',
+        chain_type_kwargs={'prompt': prompt_template}
+    )
+
+
+def generate_ai_response(user_text: str, has_price_objection: bool = False) -> str:
     """Generate AI response for user text"""
-    chain = get_qa_chain()
+    if has_price_objection:
+        # Create a new chain with price objection context (not cached)
+        chain = _create_qa_chain_with_price_objection()
+    else:
+        # Use cached chain for regular queries
+        chain = get_qa_chain()
+    
     return chain.run(user_text)
 

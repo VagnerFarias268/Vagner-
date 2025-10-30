@@ -106,7 +106,27 @@ async def test(
         result["input_type"] = "text"
         result["text"] = text
 
-        data = generate_ai_response(text)
+        # Use the message handler to properly detect buying intent
+        handler = get_message_handler()
+        
+        # Check for buying intent
+        has_buying_intent = handler.detect_buying_intent(text)
+        has_price_objection = handler.detect_price_objection(text)
+        
+        if has_buying_intent:
+            # Send payment link logic
+            if has_price_objection:
+                link = handler.payment.get_payment_link(price_objection=True, max_discount=False)
+                data = f'💰 Entendo sua preocupação com o preço! Tenho uma condição especial para você: {link}'
+            else:
+                link = handler.payment.get_payment_link(price_objection=False)
+                data = f'✅ Perfeito! Aqui está o link para finalizar sua compra: {link}'
+            
+            result["buying_intent"] = True
+            result["discount"] = has_price_objection
+        else:
+            data = generate_ai_response(text)
+        
         print(data)
     
     # Handle audio input

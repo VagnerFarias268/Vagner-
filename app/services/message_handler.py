@@ -106,11 +106,22 @@ class MessageHandler:
             'me manda o link', 'link de pagamento', 'como pagar', 'onde pago',
             'link', 'pagar', 'comprar', 'quero levar', 'vou levar',
             'fechar', 'finalizar', 'pagamento', 'adquirir', 'quero um',
-            'quero o', 'quero esse', 'quero essa', 'me vende', 'vender'
+            'quero o', 'quero esse', 'quero essa', 'me vende', 'vender',
+            'compro', 'vou pegar', 'vou adquirir', 'vou comprar isso',
+            'quero isso', 'me interessa', 'tô interessado', 'estou interessado',
+            'quero sim', 'aceito', 'pode enviar', 'manda o link', 'enviar link',
+            'como pago', 'eu pago', 'pago', 'vou pagar'
         ]
         
-        user_lower = user_text.lower()
-        return any(kw in user_lower for kw in buying_keywords)
+        user_lower = user_text.lower().strip()
+        detected = any(kw in user_lower for kw in buying_keywords)
+        
+        if detected:
+            print(f"✅ BUYING INTENT DETECTED in: '{user_text}'")
+        else:
+            print(f"ℹ️  No buying intent detected in: '{user_text}'")
+        
+        return detected
     
     def detect_price_objection(self, user_text: str) -> bool:
         """Detect if user has price objections (returns boolean only)"""
@@ -174,8 +185,8 @@ class MessageHandler:
         # Get relevant media from KB
         media_files = self.get_relevant_media(user_text)
         
-        # Generate AI response
-        ai_reply = generate_ai_response(user_text)
+        # Generate AI response (with price objection context if detected)
+        ai_reply = generate_ai_response(user_text, has_price_objection=has_price_objection)
         
         # Archive conversation
         try:
